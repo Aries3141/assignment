@@ -1,0 +1,75 @@
+from netpyne import specs, sim
+import random as r
+netParams = specs.NetParams()
+secs = {}
+secs['soma'] = {'geom': {}, 'topol': {}, 'mechs': {}}
+secs['soma']['geom'] = {'diam': 18.8, 'L': 18.8}
+secs['soma']['mechs']['hh'] = {'gnabar': 0.25, 'gkbar': 0.036, 'gl': 0.01, 'el': -65}
+netParams.cellParams['PYR'] = {'secs': secs}
+
+netParams.popParams['exc'] = {'cellType': 'PYR', 'numCells': 40}
+netParams.popParams['inh'] = {'cellType': 'PYR', 'numCells': 10}
+
+netParams.synMechParams['excsyn'] = {'mod': 'Exp2Syn', 'tau1': 0.1, 'tau2': abs(r.normalvariate(1.0, 0.5)), 'e': 10,
+                                     'selfNetCon': {'threshold': -45}}
+netParams.synMechParams['inhsyn'] = {'mod': 'Exp2Syn', 'tau1': 0.1, 'tau2': abs(r.normalvariate(1.0, 0.5)), 'e': -80,
+                                     'selfNetCon': {'threshold': -30}}
+
+netParams.stimSourceParams['bkg'] = {'type': 'NetStim', 'rate': 10, 'noise': 0.05}
+netParams.stimTargetParams['bkg->all'] = {
+    'source': 'bkg',
+    'conds': {'cellType': 'PYR'},
+    'weight': 0.5,
+    'probability':0.5,
+    'delay': 8,
+    'synMech': 'excsyn'
+}
+
+netParams.connParams['exc->exc'] = {
+    'preConds': {'pop': 'exc'},
+    'postConds': {'pop': 'exc'},
+    'weight': 0.02,
+    'probability': 0.8,
+    'synMech': 'excsyn',
+    'delay': 8}
+netParams.connParams['exc->inh'] = {
+    'preConds': {'pop': 'exc'},
+    'postConds': {'pop': 'inh'},
+    'weight': 0.02,
+    'probability': 0.8,
+    'synMech': 'excsyn',
+    'delay': 8}
+netParams.connParams['inh->exc'] = {
+    'preConds': {'pop': 'inh'},
+    'postConds': {'pop': 'exc'},
+    'weight': 0.02,
+    'probability': 0.8,
+    'synMech': 'inhsyn',
+    'delay': 8}
+netParams.connParams['inh->inh'] = {
+    'preConds': {'pop': 'inh'},
+    'postConds': {'pop': 'inh'},
+    'weight': 0.02,
+    'probability': 0.8,
+    'synMech': 'inhsyn',
+    'delay': 8}
+
+
+simConfig = specs.SimConfig()
+simConfig.duration = 1*1e3
+simConfig.dt = 0.025
+simConfig.verbose = False
+simConfig.recordCell = {'all'}
+simConfig.recordTraces = {'V_soma':{'sec':'soma','loc':0.5,'var':'v'}}
+simConfig.recordStep = 1
+simConfig.filename = 'first challenge'
+simConfig.savePickle = False
+
+simConfig.analysis['plotTraces'] = {'include': [0, 40], 'saveFig': True}
+simConfig.analysis['plot2Dnet'] = {'saveFig': True}
+simConfig.analysis['plotRaster'] = {'include': [('exc', None), ('inh', None)], 'saveFig': True}
+
+
+
+# Create network and run simulation
+sim.createSimulateAnalyze(netParams = netParams, simConfig = simConfig)
